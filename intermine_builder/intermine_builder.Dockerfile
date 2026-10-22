@@ -75,4 +75,11 @@ ENV PGPORT=5432
 
 WORKDIR /home/intermine
 
+# Keep webapp.baseurl (the public URL InterMine embeds in generated code) in
+# sync with PUBLIC_URL from .env; see set-webapp-baseurl.sh and entrypoint.sh.
+COPY set-webapp-baseurl.sh /usr/local/bin/set-webapp-baseurl
+COPY entrypoint.sh /usr/local/bin/intermine-builder-entrypoint
+RUN chmod 755 /usr/local/bin/set-webapp-baseurl /usr/local/bin/intermine-builder-entrypoint
+
+ENTRYPOINT ["/usr/local/bin/intermine-builder-entrypoint"]
 CMD ["/bin/sh"]

@@ -1,0 +1,5 @@
+# Runtime data of a deployment: database, Solr index, build tree, maven cache,
+# and the mine properties (which contain passwords).  Created by `make volumes`.
+data/
+*.log
+.DS_Store

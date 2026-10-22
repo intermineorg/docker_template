@@ -156,11 +156,36 @@
         <Valve className="org.apache.catalina.authenticator.SingleSignOn" />
         -->
 
+        <!-- Tomcat sits behind the nginx container (and normally a TLS-terminating
+             proxy in front of that).  Trust the X-Forwarded-For/Proto/Port headers
+             that nginx sets, so that request.getScheme(), getServerPort(),
+             isSecure() and getRemoteAddr() describe the public request
+             (https, 443, real client IP) rather than the Docker-internal hop
+             (http, 8080, nginx's address).
+
+             InterMine's URLGenerator appends ":port" to webapp.baseurl when the
+             request port is not 80/443, and falls back to scheme://host:port when
+             webapp.baseurl is blank, so this keeps the URLs it generates (code
+             generation, permalinks, redirects) correct in both configurations.
+
+             internalProxies lists the RFC1918 and loopback ranges, which covers
+             Docker bridge networks; X-Forwarded-* headers arriving from any other
+             address are ignored, so they cannot be spoofed from outside.
+             Documentation at: /docs/config/valve.html#Remote_IP_Valve -->
+        <Valve className="org.apache.catalina.valves.RemoteIpValve"
+               remoteIpHeader="X-Forwarded-For"
+               protocolHeader="X-Forwarded-Proto"
+               portHeader="X-Forwarded-Port"
+               internalProxies="10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.1[6-9]{1}\.\d{1,3}\.\d{1,3}|172\.2[0-9]{1}\.\d{1,3}\.\d{1,3}|172\.3[0-1]{1}\.\d{1,3}\.\d{1,3}|0:0:0:0:0:0:0:1|::1" />
+
         <!-- Access log processes all example.
              Documentation at: /docs/config/valve.html
-             Note: The pattern used is equivalent to using pattern="common" -->
+             Note: The pattern used is equivalent to using pattern="common".
+             requestAttributesEnabled makes %h log the client IP recovered by the
+             RemoteIpValve above instead of nginx's address. -->
         <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
                prefix="localhost_access_log" suffix=".txt"
+               requestAttributesEnabled="true"
                pattern="%h %l %u %t &quot;%r&quot; %s %b" />
 
       </Host>

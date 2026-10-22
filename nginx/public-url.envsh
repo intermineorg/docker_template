@@ -1,0 +1,24 @@
+#!/bin/sh
+# Sourced by the nginx image's entrypoint before the envsubst step.
+# Splits PUBLIC_URL (e.g. https://www.flymine.org or http://devbox:14809) into
+# the pieces the config template needs.
+set -e
+: "${PUBLIC_URL:?PUBLIC_URL is not set (define it in .env)}"
+: "${MINE:?MINE is not set (define it in .env)}"
+url="${PUBLIC_URL%/}"
+case "$url" in
+    https://*) PUBLIC_SCHEME=https; default_port=443 ;;
+    http://*)  PUBLIC_SCHEME=http;  default_port=80 ;;
+    *) echo "public-url.envsh: PUBLIC_URL must start with http:// or https://" >&2; exit 1 ;;
+esac
+hostport="${url#*://}"
+case "$hostport" in
+    */*) echo "public-url.envsh: PUBLIC_URL must not contain a path" >&2; exit 1 ;;
+esac
+PUBLIC_HOST="${hostport%%:*}"
+case "$hostport" in
+    *:*) PUBLIC_PORT="${hostport#*:}" ;;
+    *)   PUBLIC_PORT="$default_port" ;;
+esac
+export PUBLIC_HOST PUBLIC_SCHEME PUBLIC_PORT
+echo "public-url.envsh: MINE=$MINE PUBLIC_HOST=$PUBLIC_HOST PUBLIC_SCHEME=$PUBLIC_SCHEME PUBLIC_PORT=$PUBLIC_PORT"

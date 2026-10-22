@@ -1,7 +1,7 @@
-version: "3"
+version: "3.4"
 services:
   intermine_builder:
-    container_name: ${MINE}_builder
+    container_name: ${MINE}${INSTANCE}_builder
     networks:
       - frontend
       - backend
@@ -14,9 +14,14 @@ services:
       - ./data/workdir:/home/intermine/workdir
       - ./data/maven.m2:/home/intermine/.m2
       - ./data/properties.intermine:/home/intermine/.intermine
+    environment:
+      - MINE_NAME=${MINE}
+      # Written into webapp.baseurl of data/properties.intermine/${MINE}.properties
+      # on every start of this container (see intermine_builder/entrypoint.sh).
+      - WEBAPP_BASEURL=${PUBLIC_URL}
 
   postgres:
-    container_name: ${MINE}_postgres
+    container_name: ${MINE}${INSTANCE}_postgres
     networks:
       - backend
     build:
@@ -31,7 +36,7 @@ services:
       - MINE_NAME=${MINE}
 
   solr:
-    container_name: ${MINE}_solr
+    container_name: ${MINE}${INSTANCE}_solr
     networks:
       - backend
     build:
@@ -42,11 +47,21 @@ services:
     volumes:
       - ./data/solr:/var/solr
     environment:
-      - MEM_OPTS="-Xmx8g -Xms1g"
+      # Solr's start script reads SOLR_JAVA_MEM / SOLR_HEAP, not JAVA_OPTS or
+      # MEM_OPTS; the old MEM_OPTS line left Solr on the 512m default heap.
+      # Must fit in host RAM together with Tomcat and Postgres.
+      - SOLR_JAVA_MEM=-Xms1g -Xmx8g
       - MINE_NAME=${MINE}
+    healthcheck:
+      # Opening a mine-sized index after a (re)start takes a while; do not
+      # count that against the container, and tolerate a slow ping.
+      start_period: 180s
+      interval: 30s
+      timeout: 20s
+      retries: 5
 
   tomcat:
-    container_name: ${MINE}_tomcat
+    container_name: ${MINE}${INSTANCE}_tomcat
     networks:
       - frontend
       - backend
@@ -56,9 +71,17 @@ services:
     restart: unless-stopped
     volumes:
       - tomcat-webapps:/usr/local/tomcat/webapps:Z
+    environment:
+      - MINE=${MINE}          # used by the image's healthcheck
+    healthcheck:
+      # The InterMine webapp needs several minutes after a (re)start.
+      start_period: 900s
+      interval: 30s
+      timeout: 15s
+      retries: 5
 
   bluegenes:
-    container_name: ${MINE}_bluegenes
+    container_name: ${MINE}${INSTANCE}_bluegenes
     networks:
       - frontend
       - backend
@@ -67,19 +90,26 @@ services:
     volumes:
       - ./data/tools:/tools
     environment:
-      - BLUEGENES_DEFAULT_SERVICE_ROOT="https://${MINE}.org/${MINE}"
-      - BLUEGENES_BACKEND_SERVICE_ROOT="http://tomcat:8080/${MINE}"
+      # Public URL the *browser* uses to reach the mine's web service.
+      # (No quotes: in list form docker-compose keeps them as part of the value.)
+      - BLUEGENES_DEFAULT_SERVICE_ROOT=${PUBLIC_URL}/${MINE}
+      # Docker-internal URL the BlueGenes *server* uses for the same service.
+      - BLUEGENES_BACKEND_SERVICE_ROOT=http://tomcat:8080/${MINE}
       - BLUEGENES_DEFAULT_MINE_NAME=${MINE}
       - BLUEGENES_DEFAULT_NAMESPACE=${MINE}
 
   nginx:
-    container_name: ${MINE}_nginx
+    container_name: ${MINE}${INSTANCE}_nginx
     networks:
       - frontend
     build:
       context: ./nginx
       dockerfile: ./nginx.Dockerfile
     restart: unless-stopped
+    environment:
+      # Rendered into nginx/nginx.conf.template at start-up.
+      - MINE=${MINE}
+      - PUBLIC_URL=${PUBLIC_URL}
     ports:
       - ${HTTP_PORT}:80
 
