@@ -79,7 +79,7 @@ volumes:
 # Write PUBLIC_URL (from .env) into webapp.baseurl in
 # data/properties.intermine/$(MINE).properties.  The builder container also does
 # this automatically on every start; this target just does it explicitly.
-# Afterwards redeploy the webapp from `make shell`:  ./gradlew cargoRedeploy
+# Afterwards redeploy the webapp from `make shell`:  ./gradlew cargoRedeployRemote
 baseurl:
 	docker-compose run --rm intermine_builder set-webapp-baseurl
 

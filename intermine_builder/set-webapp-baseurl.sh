@@ -11,7 +11,7 @@
 # keep the internal value: it is the Tomcat manager URL Gradle deploys to.
 #
 # The change only takes effect after the webapp is rebuilt and redeployed
-# (./gradlew cargoRedeploy), because the properties are copied into the WAR.
+# (./gradlew cargoRedeployRemote), because the properties are copied into the WAR.
 #
 # Exit codes: 0 ok (changed or already correct), 1 bad input, 2 no properties file.
 set -eu
@@ -56,4 +56,4 @@ else
     printf '\n# Public URL of the site (scheme + host). Set from PUBLIC_URL in .env.\nwebapp.baseurl=%s\n' "$url" >> "$props"
 fi
 echo "set-webapp-baseurl: webapp.baseurl changed from '${current:-<unset>}' to '$url' in $props"
-echo "set-webapp-baseurl: redeploy the webapp (./gradlew cargoRedeploy) for this to take effect"
+echo "set-webapp-baseurl: redeploy the webapp (./gradlew cargoRedeployRemote) for this to take effect"

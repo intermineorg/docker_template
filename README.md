@@ -59,7 +59,7 @@ Two things no restart target does:
   restarted, and nginx refused to start at all while tomcat or bluegenes did
   not exist.
 - **The webapp itself.** A new `webapp.baseurl` or a rebuilt webapp needs
-  `./gradlew cargoRedeploy` from `make shell`, not a Tomcat restart.
+  `./gradlew cargoRedeployRemote` from `make shell`, not a Tomcat restart.
 
 Combinations that genuinely need more than one container: Postgres (always
 with Tomcat, see above); a change of `MINE`, `INSTANCE` or `PUBLIC_URL` in
@@ -159,7 +159,7 @@ value changes:
 make baseurl                 # or just `make shell`; both print what they changed
 make shell
   cd workdir/<your mine>     # wherever the mine's gradle project lives
-  ./gradlew cargoRedeploy    # rebuilds the webapp with the new properties
+  ./gradlew cargoRedeployRemote    # rebuilds the webapp with the new properties
 ```
 
 Tomcat (`tomcat/configs/server.xml`) now has a `RemoteIpValve` that trusts the
@@ -275,7 +275,7 @@ substitute `humanmine` throughout.
    ```
    make shell
      cd workdir/${MINE}            # wherever the mine's gradle project is
-     ./gradlew cargoDeployRemote   # first deploy; later: ./gradlew cargoRedeploy
+     ./gradlew cargoDeployRemote   # first deploy; later: ./gradlew cargoRedeployRemote
    ```
 
 6. Test at `PUBLIC_URL`: `make check-baseurl`, generate code from a results page,

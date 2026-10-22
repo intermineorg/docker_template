@@ -73,7 +73,7 @@ and `bluegenes` repositories on GitHub:
    appends `~/.intermine/<mine>.properties` to `WEB-INF/web.properties`
    (`plugin/.../WebAppPlugin.groovy`, lines 42 to 56). Changing the file in
    `data/properties.intermine/` therefore does nothing until the webapp is
-   rebuilt and redeployed (`./gradlew cargoRedeploy`); a Tomcat restart is not
+   rebuilt and redeployed (`./gradlew cargoRedeployRemote`); a Tomcat restart is not
    enough.
 
 5. **Why it is wrong in the first place.** The stock example properties ship
@@ -99,7 +99,7 @@ as well; the fix below repairs them at the same time.
 ### A. Set `webapp.baseurl` to the public origin (InterMine's own knob)
 
 Edit `data/properties.intermine/<mine>.properties`, keep `webapp.deploy.url`
-internal, run `./gradlew cargoRedeploy`.
+internal, run `./gradlew cargoRedeployRemote`.
 
 - Pro: this is the mechanism InterMine designed for exactly this situation.
   One line fixes code generation in every language plus the dozen other
@@ -319,7 +319,7 @@ template, and how to stand up a parallel test deployment.
    `grep -E 'webapp\.(baseurl|deploy\.url|path)' data/properties.intermine/<mine>.properties`
    that `webapp.deploy.url` is still `http://tomcat:8080` and `webapp.baseurl`
    is the public origin.
-4. In `make shell`, from the mine's Gradle project: `./gradlew cargoRedeploy`.
+4. In `make shell`, from the mine's Gradle project: `./gradlew cargoRedeployRemote`.
    This rebuilds the webapp with the new properties; no database work.
 5. `make check-baseurl`, or generate code from any results page and look at
    the `Service(...)` line.
