@@ -53,6 +53,18 @@ server {
 		proxy_set_header Host $host;
 		proxy_set_header X-Real-IP $remote_addr;
 	}
+	# InterMine fetches its own query schemas from webapp.baseurl on every
+	# query-service call (webservice/query.xsd, webservice/query.schema).  If
+	# this fell through to BlueGenes the webapp would get HTML instead: XML
+	# queries would silently skip validation and JSON queries would fail.
+	location /${MINE}/webservice {
+		proxy_pass $tomcat;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
+		proxy_set_header X-Forwarded-Port ${PUBLIC_PORT};
+		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+	}
 	# The classic JSP webapp, published under /query
 	location /query {
 		rewrite ^/query(.*)$ /${MINE}$1 break;
