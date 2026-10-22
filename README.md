@@ -4,7 +4,7 @@
 
 `make shell` to start a shell in container with:
 - environment needed to build a mine
-- *data/flymine* and more volumes mounted to homedir
+- *data/workdir*, *data/maven.m2* and *data/properties.intermine* mounted into its home directory
 - network access to services using hostnames and ports:
     - tomcat:8080
     - solr:8983
@@ -69,13 +69,16 @@ by a webapp redeploy); and a Docker network recreation (`make down` /
 
 ## Solr: why it goes unhealthy, and what changed
 
-Things to look at on an unhealthy Solr container (names assume `MINE=flymine`):
+Things to look at on an unhealthy Solr container. `make diagnose-solr` runs
+all of the following with the container name taken from `.env`
+(`${MINE}${INSTANCE}_solr`); to run them by hand, set `MINE` first
+(`MINE=flymine` or `MINE=humanmine`):
 
 ```
-docker inspect -f '{{.RestartCount}} restarts, {{.State.Health.Status}}, OOMKilled={{.State.OOMKilled}}, exit={{.State.ExitCode}}' flymine_solr
-docker inspect -f '{{range .State.Health.Log}}{{.End}} {{.ExitCode}} {{.Output}}{{end}}' flymine_solr | tail
-docker logs --since 24h flymine_solr 2>&1 | grep -E -i 'OutOfMemoryError|oom_solr|Running OOM|too many open files'
-docker exec flymine_solr wget -qO - 'http://localhost:8983/solr/admin/info/system?wt=json' | grep -o -E '"-Xm[sx][^"]*"'
+docker inspect -f '{{.RestartCount}} restarts, {{.State.Health.Status}}, OOMKilled={{.State.OOMKilled}}, exit={{.State.ExitCode}}' ${MINE}_solr
+docker inspect -f '{{range .State.Health.Log}}{{.End}} {{.ExitCode}} {{.Output}}{{end}}' ${MINE}_solr | tail
+docker logs --since 24h ${MINE}_solr 2>&1 | grep -E -i 'OutOfMemoryError|oom_solr|Running OOM|too many open files'
+docker exec ${MINE}_solr wget -qO - 'http://localhost:8983/solr/admin/info/system?wt=json' | grep -o -E '"-Xm[sx][^"]*"'
 docker stats --no-stream
 ```
 
@@ -116,17 +119,22 @@ Changes:
 If Solr still ends up unhealthy after this, the logs will say why. Solr 8.4.1
 is from early 2020; moving to the last 8.x release (8.11) is a low-risk
 upgrade InterMine supports. To restart it automatically when it goes
-unhealthy, a host cron entry is enough:
+unhealthy, a host cron entry per mine is enough (`crontab -e`; cron has no
+`.env`, so the names are spelled out). Each line checks the health status
+every five minutes and runs `make restart-solr` in that mine's directory only
+when it reads `unhealthy`:
 
 ```
-*/5 * * * * cd /srv/flymine && docker inspect -f '{{.State.Health.Status}}' flymine_solr | grep -q unhealthy && make restart-solr
+PATH=/usr/local/bin:/usr/bin:/bin
+*/5 * * * * cd $HOME/intermine/docker/flymine   && docker inspect -f '{{.State.Health.Status}}' flymine_solr   | grep -q unhealthy && make restart-solr
+*/5 * * * * cd $HOME/intermine/docker/humanmine && docker inspect -f '{{.State.Health.Status}}' humanmine_solr | grep -q unhealthy && make restart-solr
 ```
 
 ## Public URL and the URL embedded in generated code
 
 `.env` has a fourth setting, `PUBLIC_URL`, the public origin of the site
 (scheme + host, optional `:port`, **no path, no trailing slash**), e.g.
-`https://www.flymine.org`. It feeds two things:
+`https://www.flymine.org` or `https://www.humanmine.org`. It feeds two things:
 
 - **BlueGenes**: `BLUEGENES_DEFAULT_SERVICE_ROOT=${PUBLIC_URL}/${MINE}` is the
   service root the browser talks to. `BLUEGENES_BACKEND_SERVICE_ROOT` stays
@@ -190,14 +198,16 @@ publishes a port. Postgres, Solr and Tomcat all resolve `tomcat`, `postgres`,
 `solr` within their own project network, so the mine properties need no edits
 beyond what the builder entrypoint does for `webapp.baseurl`.
 
-Assume production lives in `/srv/flymine`; the test copy goes in
-`/srv/flymine-test` (a different directory name is required).
+The examples use FlyMine, with production in `~/intermine/docker/flymine` and
+the test copy in `~/intermine/docker/flymine-test` (a different directory name
+is required, because it becomes the compose project name). For HumanMine
+substitute `humanmine` throughout.
 
 1. Copy the configuration, not the data:
 
    ```
-   rsync -a --exclude data/ /srv/flymine/ /srv/flymine-test/
-   cd /srv/flymine-test
+   rsync -a --exclude data/ ~/intermine/docker/flymine/ ~/intermine/docker/flymine-test/
+   cd ~/intermine/docker/flymine-test
    ```
 
 2. Edit `.env`:
@@ -228,21 +238,21 @@ Assume production lives in `/srv/flymine`; the test copy goes in
    ```
    make volumes
    rmdir data/maven.m2 data/tools
-   ln -s /srv/flymine/data/maven.m2 data/maven.m2
-   ln -s /srv/flymine/data/tools    data/tools
-   rsync -a /srv/flymine/data/properties.intermine/ data/properties.intermine/
-   rsync -a /srv/flymine/data/workdir/              data/workdir/
-   rsync -a /srv/flymine/data/solr/                 data/solr/      # index is quiescent in production
+   ln -s ~/intermine/docker/flymine/data/maven.m2 data/maven.m2
+   ln -s ~/intermine/docker/flymine/data/tools    data/tools
+   rsync -a ~/intermine/docker/flymine/data/properties.intermine/ data/properties.intermine/
+   rsync -a ~/intermine/docker/flymine/data/workdir/              data/workdir/
+   rsync -a ~/intermine/docker/flymine/data/solr/                 data/solr/      # index is quiescent in production
    ```
 
    Postgres needs ownership preserved (it runs as uid 29023) and a consistent
    snapshot, so run as root and take the final pass with production stopped:
 
    ```
-   sudo rsync -a /srv/flymine/data/postgres/ data/postgres/            # bulk copy, production running
-   (cd /srv/flymine && make stop)
-   sudo rsync -a --delete /srv/flymine/data/postgres/ data/postgres/   # short delta pass
-   (cd /srv/flymine && make start)
+   sudo rsync -a ~/intermine/docker/flymine/data/postgres/ data/postgres/            # bulk copy, production running
+   (cd ~/intermine/docker/flymine && make stop)
+   sudo rsync -a --delete ~/intermine/docker/flymine/data/postgres/ data/postgres/   # short delta pass
+   (cd ~/intermine/docker/flymine && make start)
    sudo chmod 700 data/postgres
    ```
 
@@ -264,7 +274,7 @@ Assume production lives in `/srv/flymine`; the test copy goes in
 
    ```
    make shell
-     cd workdir/flymine            # wherever the mine's gradle project is
+     cd workdir/${MINE}            # wherever the mine's gradle project is
      ./gradlew cargoDeployRemote   # first deploy; later: ./gradlew cargoRedeploy
    ```
 

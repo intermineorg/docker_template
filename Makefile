@@ -50,6 +50,19 @@ wait-healthy-%:
 ps:
 	docker-compose ps
 
+# Why is Solr unhealthy?  Restart count, health log, OOM messages, real heap.
+diagnose-solr:
+	@c=$(MINE)$(INSTANCE)_solr; \
+	docker inspect -f '{{.RestartCount}} restarts, {{.State.Health.Status}}, OOMKilled={{.State.OOMKilled}}, exit={{.State.ExitCode}}' $$c; \
+	echo "--- last health checks"; \
+	docker inspect -f '{{range .State.Health.Log}}{{.End}} {{.ExitCode}} {{.Output}}{{end}}' $$c | tail -n 5; \
+	echo "--- memory-related log lines (24h)"; \
+	docker logs --since 24h $$c 2>&1 | grep -E -i 'OutOfMemoryError|oom_solr|Running OOM|too many open files' | tail -n 10; \
+	echo "--- JVM heap in use"; \
+	docker exec $$c wget -qO - 'http://localhost:8983/solr/admin/info/system?wt=json' | grep -o -E '"-Xm[sx][^"]*"'; \
+	echo "--- container resource usage"; \
+	docker stats --no-stream $$c
+
 start:
 	docker-compose start
 
