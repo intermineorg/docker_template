@@ -274,3 +274,7 @@ Assume production lives in `/srv/flymine`; the test copy goes in
 7. Tear down: `make down` then `rm -rf data` (removes the symlinks, not their
    targets). Memory: the test stack needs the same RAM as production
    (Solr 8 GB, Tomcat 4 GB, the builder up to 32 GB while building).
+
+## License
+
+MIT, see [LICENSE](LICENSE).
