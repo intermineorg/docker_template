@@ -87,7 +87,8 @@ server {
 		proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
 	}
 	location = /jbrowse {
-		return 301 ${PUBLIC_URL}/jbrowse/;
+		absolute_redirect off;
+		return 301 /jbrowse/;
 	}
 	location /come {
 		proxy_pass $tomcat;
