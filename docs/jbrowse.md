@@ -164,23 +164,45 @@ and correct the key in `jbrowse/jbrowse_conf.json` if it differs. After an
 edit, `docker-compose up -d --build` in `jbrowse/`. A wrong key only
 affects which entry the drop-down highlights; tracks still load.
 
-## Alternative: serve JBrowse under each mine's own hostname
+## Alternative: serve JBrowse under each mine's own hostname (no new port)
 
-Instead of (or as well as) a shared host, the same static files can be
-served by each mine's nginx container at, say,
-`https://www.humanmine.org/jbrowse/`. That avoids a new DNS name and
-certificate and is same-origin, so CORS is not involved, but it has to be
-done per mine and each mine must then be told where its JBrowse is:
+A browser, not the server, fetches `jbrowse.intermine.org`, so no redirect
+or hosts entry on the server can substitute for the public hostname. When
+no new public port or hostname is available, the same container can be
+reached through the mine's existing nginx as `https://www.humanmine.org/jbrowse/`
+instead. This rides on the port that already serves the mine, is
+same-origin with the data (so CORS is not even involved), but must be done
+per mine and each mine must be told where its JBrowse is.
 
-- BlueGenes: edit `jbrowseUrl` in the installed tool's `config.json`
-  (under the tools directory mounted at `./data/tools`, in
-  `node_modules/@intermine/bluegenes-jbrowse-tool/config.json`) to
-  `https://www.humanmine.org/jbrowse/?data=`.
-- Classic webapp: set `jbrowse.install.url = https://www.humanmine.org/jbrowse/`
-  in the mine properties and run `./gradlew cargoRedeployRemote`.
+1. Join the jbrowse container to each mine's frontend network: copy
+   `jbrowse/docker-compose.override.yml.example` to
+   `jbrowse/docker-compose.override.yml`, adjust the network names
+   (`docker network ls`, they are `<mine directory>_frontend`), then
+   `docker-compose up -d` in `jbrowse/`.
+2. The nginx template in this repository already carries a `/jbrowse/`
+   location that proxies to `http://jbrowse:80` through a runtime-resolved
+   variable, so the mine's nginx keeps starting and serving even when no
+   jbrowse container exists (requests to `/jbrowse/` then return 502).
+   Rebuild the mine's nginx (`docker-compose up -d --build nginx`) and check:
 
-Restoring the default hostname is the simpler choice, and it also repairs
-any third-party mine that still relies on it. Both can coexist.
+   ```sh
+   curl -sI https://www.humanmine.org/jbrowse/ | head -1                       # 200
+   curl -s  https://www.humanmine.org/jbrowse/ | grep -o 'allowCrossOriginDataRoot": [a-z]*'
+   ```
+
+3. Point the mine at it:
+   - BlueGenes: edit `jbrowseUrl` in the installed tool's `config.json`
+     (under the tools directory mounted at `./data/tools`; find it with
+     `find data/tools -path '*bluegenes-jbrowse-tool/config.json'`) to
+     `https://www.humanmine.org/jbrowse/?data=`, then
+     `docker-compose restart bluegenes`. Reinstalling or updating the tool
+     from the admin page restores the default, so keep a note of the edit.
+   - Classic webapp (optional): set
+     `jbrowse.install.url = https://www.humanmine.org/jbrowse/` in the mine
+     properties and run `./gradlew cargoRedeployRemote`.
+
+The two routes are not exclusive: if `jbrowse.intermine.org` is published
+later, the tool configuration can simply be reverted to the default.
 
 ## Verifying the mine side
 

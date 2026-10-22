@@ -22,6 +22,7 @@ server {
 	resolver 127.0.0.11 valid=10s ipv6=off;
 	set $tomcat http://tomcat:8080;
 	set $bluegenes http://bluegenes:5000;
+	set $jbrowse http://jbrowse:80;
 	error_log /var/log/nginx/${PUBLIC_HOST}_err.log warn;
 	access_log /var/log/nginx/${PUBLIC_HOST}_access.log combined;
 
@@ -74,6 +75,19 @@ server {
 		proxy_set_header X-Forwarded-Port ${PUBLIC_PORT};
 		proxy_set_header Host $host;
 		proxy_set_header X-Real-IP $remote_addr;
+	}
+	# Optional: JBrowse served under this mine's own hostname, with no extra
+	# public port. Requires the jbrowse container (see jbrowse/) to be joined
+	# to this project's frontend network. The upstream is a variable, so nginx
+	# starts and serves the mine even when no jbrowse container exists.
+	location /jbrowse/ {
+		rewrite ^/jbrowse/(.*)$ /$1 break;
+		proxy_pass $jbrowse;
+		proxy_set_header Host $host;
+		proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
+	}
+	location = /jbrowse {
+		return 301 ${PUBLIC_URL}/jbrowse/;
 	}
 	location /come {
 		proxy_pass $tomcat;
