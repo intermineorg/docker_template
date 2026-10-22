@@ -285,6 +285,23 @@ substitute `humanmine` throughout.
    targets). Memory: the test stack needs the same RAM as production
    (Solr 8 GB, Tomcat 4 GB, the builder up to 32 GB while building).
 
+## JBrowse (genome browser)
+
+InterMine does not run JBrowse; report pages embed a separately hosted
+JBrowse 1.x (by default `https://jbrowse.intermine.org/`) and point it at the
+mine's `service/jbrowse/...` endpoints. If that host is down every gene
+report page shows a blank browser panel. The `jbrowse/` directory contains a
+self-contained compose stack that serves JBrowse 1.16.11 and can be put
+behind `https://jbrowse.intermine.org/` with no change to any mine:
+
+```sh
+cd jbrowse && docker-compose up -d --build     # listens on JBROWSE_HTTP_PORT (14880)
+```
+
+See [docs/jbrowse.md](docs/jbrowse.md) for DNS, TLS front-end and
+verification steps, and for serving JBrowse under a mine's own hostname
+instead.
+
 ## License
 
 MIT, see [LICENSE](LICENSE).
