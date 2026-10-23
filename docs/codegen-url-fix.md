@@ -286,6 +286,21 @@ and `/come/...` unchanged, `/` to bluegenes, and keeps working after tomcat is
 recreated on a different IP with no nginx restart. See "Container restarts"
 below.
 
+### `/favicon.ico` (same class of leak, found later)
+
+BlueGenes' server route for `/favicon.ico` (`src/clj/bluegenes/routes.clj`)
+replies `302 Found` to `(get-service-root env) + "/model/images/favicon.ico"`,
+and `get-service-root` prefers `BLUEGENES_BACKEND_SERVICE_ROOT` over the public
+`BLUEGENES_DEFAULT_SERVICE_ROOT`. In this deployment the backend root is
+`http://tomcat:8080/${MINE}`, so every page sends the browser to an internal
+hostname, over plain http, which it blocks as mixed content. The upstream fix
+would be for that one route to use the default (public) service root; until
+then `nginx.conf.template` has `location = /favicon.ico` that rewrites to
+`/${MINE}/model/images/favicon.ico` and proxies Tomcat directly. No redirect,
+same origin, and the browser caches it for a day. BlueGenes' comment in
+`routes.clj` says a `public/favicon.ico` resource would take priority, but that
+means rebuilding the BlueGenes jar, which the nginx rule avoids.
+
 ### Parallel deployments: `INSTANCE`
 Container names are now `${MINE}${INSTANCE}_<service>`, with `INSTANCE` empty
 in production. Networks and the `tomcat-webapps` volume are already namespaced

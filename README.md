@@ -189,6 +189,14 @@ rendered file: `docker compose exec nginx cat /etc/nginx/conf.d/default.conf`.
 test deployment reached over plain `http://host:port` gets the right values
 automatically.
 
+nginx also answers `/favicon.ico` itself, proxying the mine's icon from Tomcat
+(`/${MINE}/model/images/favicon.ico`). BlueGenes' own handler for that path
+redirects the browser to `BLUEGENES_BACKEND_SERVICE_ROOT`, i.e. to
+`http://tomcat:8080/...`, which the browser cannot reach and blocks as mixed
+content (visible as a console error on every page). Check with
+`curl -sI https://www.humanmine.org/favicon.ico`: expect `200` and
+`Content-Type: image/x-icon`, not a `302` to an internal host.
+
 ## Parallel test deployment
 
 Two deployments of the same mine can run on one host: every container name
