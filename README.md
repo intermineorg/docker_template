@@ -297,18 +297,18 @@ substitute `humanmine` throughout.
 
 InterMine does not run JBrowse; report pages embed a separately hosted
 JBrowse 1.x (by default `https://jbrowse.intermine.org/`) and point it at the
-mine's `service/jbrowse/...` endpoints. If that host is down every gene
-report page shows a blank browser panel. The `jbrowse/` directory contains a
-self-contained compose stack that serves JBrowse 1.16.11 and can be put
-behind `https://jbrowse.intermine.org/` with no change to any mine:
+mine's `service/jbrowse/...` endpoints. If that host is unreachable every gene
+report page shows a blank browser panel. One JBrowse serves every mine, so it
+lives in its own repository:
+[intermineorg/jbrowse](https://github.com/intermineorg/jbrowse).
 
-```sh
-cd jbrowse && docker-compose up -d --build     # listens on JBROWSE_HTTP_PORT (14880)
-```
-
-See [docs/jbrowse.md](docs/jbrowse.md) for DNS, TLS front-end and
-verification steps, and for serving JBrowse under a mine's own hostname
-instead.
+What this template contributes is the optional `/jbrowse/` location in
+`nginx/nginx.conf.template`: when the `jbrowse` container is joined to this
+deployment's `frontend` network, the mine serves it as
+`${PUBLIC_URL}/jbrowse/` with no extra port or hostname. The upstream is a
+runtime-resolved variable, so nginx starts and serves the mine whether or not
+that container exists. The steps (network override, tool `config.json`
+edit) are in that repository's README.
 
 ## License
 

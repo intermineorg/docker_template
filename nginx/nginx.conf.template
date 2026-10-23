@@ -91,7 +91,8 @@ server {
 		proxy_set_header X-Real-IP $remote_addr;
 	}
 	# Optional: JBrowse served under this mine's own hostname, with no extra
-	# public port. Requires the jbrowse container (see jbrowse/) to be joined
+	# public port. Requires the jbrowse container (from
+	# https://github.com/intermineorg/jbrowse) to be joined
 	# to this project's frontend network. The upstream is a variable, so nginx
 	# starts and serves the mine even when no jbrowse container exists.
 	location /jbrowse/ {
