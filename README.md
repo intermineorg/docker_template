@@ -197,6 +197,35 @@ content (visible as a console error on every page). Check with
 `curl -sI https://www.humanmine.org/favicon.ico`: expect `200` and
 `Content-Type: image/x-icon`, not a `302` to an internal host.
 
+## BlueGenes tools and `imjs` (blank JBrowse / visualizer panels)
+
+The BlueGenes npm tools (JBrowse, protein visualizer, MSA viewer, the
+expression visualizers, the Cytoscape network) are built against the
+InterMine JavaScript client as a browser global, `window.imjs`. BlueGenes
+used to load it from `cdn.intermine.org` on every page. Commit 06363a30 on
+its `dev` branch (October 2024, merged January 2025, so in any image built
+from `dev` since, including `1.4.5-dx`) removed that script tag because the
+CDN had died, on the assumption that nothing used it. Since then every tool
+throws `ReferenceError: imjs is not defined` and leaves an empty panel; the
+JBrowse section of a gene report page is the most visible casualty.
+
+Until BlueGenes ships the client itself, the mine's nginx fills the gap:
+`nginx/vendor/imjs/im.min.js` (imjs 4.0.0, pinned, see the README next to
+it) is served at `/vendor/imjs/im.min.js`, and `location /` uses
+`sub_filter` to add `<script src="/vendor/imjs/im.min.js">` before `</head>`
+of every BlueGenes HTML page. That needs the upstream body uncompressed
+(`proxy_set_header Accept-Encoding ""`), so the server block turns `gzip on`
+for what it sends to clients. Check:
+
+```sh
+curl -s https://www.humanmine.org/humanmine/report/Gene/1234788 | grep -o '<script src="/vendor/imjs/im.min.js"></script>'
+curl -sI https://www.humanmine.org/vendor/imjs/im.min.js | head -1      # 200
+```
+
+and a gene report page should show JBrowse and the other visualizers. If
+BlueGenes starts providing `imjs` again, delete the `location /vendor/`
+block, the two `sub_filter` lines and the `Accept-Encoding` line.
+
 ## Parallel test deployment
 
 Two deployments of the same mine can run on one host: every container name

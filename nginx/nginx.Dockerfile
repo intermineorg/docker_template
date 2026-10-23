@@ -7,6 +7,9 @@ FROM nginx:1.27.1-alpine
 # nginx's $host, $uri ... are untouched.
 COPY ./nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY ./public-url.envsh /docker-entrypoint.d/05-public-url.envsh
+# InterMine JS client, injected into BlueGenes pages for the npm tools
+# (see nginx.conf.template, "location /" and vendor/imjs/README.md).
+COPY ./vendor /usr/share/nginx/vendor
 # The entrypoint only sources *.envsh files that are executable.
 RUN chmod 755 /docker-entrypoint.d/05-public-url.envsh
 ENV NGINX_ENVSUBST_FILTER="^(MINE|PUBLIC_HOST|PUBLIC_SCHEME|PUBLIC_PORT)$"

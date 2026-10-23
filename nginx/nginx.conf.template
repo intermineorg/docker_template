@@ -25,6 +25,8 @@ server {
 	set $jbrowse http://jbrowse:80;
 	error_log /var/log/nginx/${PUBLIC_HOST}_err.log warn;
 	access_log /var/log/nginx/${PUBLIC_HOST}_access.log combined;
+	gzip on;
+	gzip_types text/css text/javascript application/javascript application/json text/plain image/svg+xml;
 
 	# robots.txt, sitemap.xml ... (mount a directory at /var/www/${MINE} to use this)
 	location ~ ^/([A-z0-9\-]+\.(xml|txt))$ {
@@ -44,6 +46,18 @@ server {
 		proxy_hide_header Set-Cookie;
 		expires 1d;
 	}
+	# BlueGenes tools (JBrowse, protein visualizer, expression viewers ...)
+	# are npm packages that expect the InterMine JS client as a global,
+	# window.imjs.  BlueGenes used to load it from cdn.intermine.org on every
+	# page; dev commit 06363a30 (Oct 2024, in images built after Jan 2025)
+	# dropped that tag because the CDN had died, and since then every tool
+	# throws "imjs is not defined" and renders an empty panel.  Until
+	# BlueGenes ships the client itself, this serves a pinned copy and adds
+	# one script tag to BlueGenes' HTML on the way through.
+	location /vendor/ {
+		alias /usr/share/nginx/vendor/;
+		expires 30d;
+	}
 	location / {
 		proxy_pass $bluegenes;
 		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -51,6 +65,11 @@ server {
 		proxy_set_header X-Forwarded-Port ${PUBLIC_PORT};
 		proxy_set_header Host $host;
 		proxy_set_header X-Real-IP $remote_addr;
+		# sub_filter needs an uncompressed upstream body; clients still get
+		# gzip from this server (gzip on, above).  Only text/html is filtered.
+		proxy_set_header Accept-Encoding "";
+		sub_filter '</head>' '<script src="/vendor/imjs/im.min.js"></script></head>';
+		sub_filter_once on;
 	}
 	location /${MINE}/service {
 		proxy_pass $tomcat;

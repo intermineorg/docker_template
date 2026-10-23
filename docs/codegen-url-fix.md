@@ -301,6 +301,29 @@ same origin, and the browser caches it for a day. BlueGenes' comment in
 `routes.clj` says a `public/favicon.ico` resource would take priority, but that
 means rebuilding the BlueGenes jar, which the nginx rule avoids.
 
+### `imjs` for the BlueGenes tools (found later, unrelated to URLs)
+
+Every BlueGenes npm tool (`@intermine/bluegenes-jbrowse-tool` and the rest)
+calls `imjs.Service` from a global that BlueGenes was expected to provide.
+BlueGenes commit 020b53a7 (2021) added
+`<script src="https://cdn.intermine.org/js/intermine/imjs/latest/im.min.js">`
+for exactly that reason; commit 06363a30 (PR #844, "Remove script loading
+imjs from cdn", merged 2025-01-26) removed it with the note that it "doesn't
+seem like it's in use either (not referenced in code and doesn't break
+anything)". It is not referenced in BlueGenes' own code, but it is in every
+tool's, so on images built from `dev` after that date all tools fail with
+`imjs is not defined`. Verified by loading a HumanMine gene report page in
+headless Chromium: the tool container is created at 600px and stays empty,
+and the console shows the ReferenceError from each tool bundle.
+
+Fix in this template: the nginx image carries `vendor/imjs/im.min.js`
+(imjs 4.0.0 from npm, SHA-256 pinned, the version the tool template
+targets) and `location /` injects one script tag with `sub_filter`. Tested
+end to end through the template nginx against the live HumanMine: `imjs`
+defined, the JBrowse iframe created, JBrowse rendering tracks, and the other
+seven tools rendering. The proper fix is upstream: BlueGenes should bundle
+imjs and set `window.imjs`, or the tools should bundle it themselves.
+
 ### Parallel deployments: `INSTANCE`
 Container names are now `${MINE}${INSTANCE}_<service>`, with `INSTANCE` empty
 in production. Networks and the `tomcat-webapps` volume are already namespaced
