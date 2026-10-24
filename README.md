@@ -253,8 +253,9 @@ hosts, and its bundled `msa` library also crashes in every browser released
 since 2021. [intermineorg/sequence-alignment-service](https://github.com/intermineorg/sequence-alignment-service)
 runs the service as a container shared by all mines on a host; this
 template's nginx proxies `/align-sequence` to it (the `$aligner` upstream),
-and that repository's README gives the two-line patch that points the tool
-at the same-origin path and fixes the library bug.
+and that repository's README gives the bundle patch that points the tool
+at the same-origin path and fixes two bugs in its bundled `msa` library
+(a crash in every current browser, and horizontal scrolling in Firefox).
 
 The remaining visualizers (tissue expression, GO terms, pathways,
 interactions, Cytoscape) talk only to the mine itself and need nothing.
