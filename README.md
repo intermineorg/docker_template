@@ -226,6 +226,39 @@ and a gene report page should show JBrowse and the other visualizers. If
 BlueGenes starts providing `imjs` again, delete the `location /vendor/`
 block, the two `sub_filter` lines and the `Accept-Encoding` line.
 
+## BlueGenes tools that call dead external services
+
+Two of the installed tools fail even with `imjs` present, because each
+depends on a web service outside the mine that no longer answers. Both are
+fixed by editing the tool's built bundle in place in `data/tools/` (the
+directory mounted into the BlueGenes container as `/tools`); no container
+needs restarting, but browsers may cache the old bundle, so reload with
+cache bypass. Reinstalling or updating a tool from the BlueGenes admin page
+restores the original bundle, so keep a note of these edits.
+
+**Protein Visualizer** (`@intermine/bluegenes-protein-visualizer` 2.1.1)
+looks structures up with RCSB's search API v1, switched off in July 2022.
+The v2 endpoint takes the same query and returns the same fields:
+
+```sh
+for f in $(grep -rl 'rcsbsearch/v1/query' data/tools/); do
+    cp "$f" "$f.bak-rcsb"; sed -i 's#rcsbsearch/v1/query#rcsbsearch/v2/query#' "$f"
+done
+```
+
+**Multiple Sequence Alignment Viewer** (`@intermine/bluegenes-msa-viewer`
+2.1.1) posts the proteins' sequences to
+`https://sequencealignment.apps.intermine.org`, which InterMine no longer
+hosts, and its bundled `msa` library also crashes in every browser released
+since 2021. [intermineorg/sequence-alignment-service](https://github.com/intermineorg/sequence-alignment-service)
+runs the service as a container shared by all mines on a host; this
+template's nginx proxies `/align-sequence` to it (the `$aligner` upstream),
+and that repository's README gives the two-line patch that points the tool
+at the same-origin path and fixes the library bug.
+
+The remaining visualizers (tissue expression, GO terms, pathways,
+interactions, Cytoscape) talk only to the mine itself and need nothing.
+
 ## Parallel test deployment
 
 Two deployments of the same mine can run on one host: every container name

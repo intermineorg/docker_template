@@ -23,6 +23,7 @@ server {
 	set $tomcat http://tomcat:8080;
 	set $bluegenes http://bluegenes:5000;
 	set $jbrowse http://jbrowse:80;
+	set $aligner http://aligner:3000;
 	error_log /var/log/nginx/${PUBLIC_HOST}_err.log warn;
 	access_log /var/log/nginx/${PUBLIC_HOST}_access.log combined;
 	gzip on;
@@ -123,6 +124,15 @@ server {
 	location = /jbrowse {
 		absolute_redirect off;
 		return 301 /jbrowse/;
+	}
+	# Optional: the sequence-alignment service behind the BlueGenes MSA viewer
+	# (https://github.com/intermineorg/sequence-alignment-service), reached
+	# same-origin as /align-sequence; the installed tool is patched to use that
+	# path (README, "BlueGenes tools that call dead external services"). The
+	# upstream is a variable, so nginx starts without an aligner container.
+	location = /align-sequence {
+		proxy_pass $aligner;
+		proxy_set_header Host $host;
 	}
 	location /come {
 		proxy_pass $tomcat;

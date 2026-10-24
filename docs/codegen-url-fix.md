@@ -423,3 +423,12 @@ on unhealthy alone.
   memory caveat (8 GB Solr + 4 GB Tomcat + Postgres + a 32 GB build must fit
   in host RAM, otherwise the kernel OOM killer becomes the next cause).
 
+
+## Hard-coded external service URLs inside BlueGenes tools
+
+Two installed tools embed URLs to services that no longer exist: the
+protein visualizer uses RCSB's retired search API v1 and the MSA viewer
+posts to `https://sequencealignment.apps.intermine.org`. Neither is a
+generated-URL problem in the mine, but the symptom (an empty or
+error-bearing panel on report pages) is the same, so the fixes are recorded
+in the README under "BlueGenes tools that call dead external services".
