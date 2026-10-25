@@ -19,6 +19,10 @@ left)
 To clear the data and start from scratch, delete `data` yourself and recreate
 volumes with `make volumes`
 
+Commands here use `docker-compose` (as does the `Makefile`), the standalone
+Compose binary on the current production server. On newer installations
+with the Compose plugin, `docker compose` takes the same arguments.
+
 ## Other commands
 
 `make logs` to see latest logs
@@ -187,7 +191,7 @@ envsubst step. Only four placeholders are substituted: `${MINE}` (webapp path,
 `${PUBLIC_PORT}`, which `nginx/public-url.envsh` derives from `PUBLIC_URL`.
 Everything else, including nginx's own `$host`, `$uri`, `$1`, is left alone.
 The container refuses to start if `PUBLIC_URL` or `MINE` is missing. To see the
-rendered file: `docker compose exec nginx cat /etc/nginx/conf.d/default.conf`.
+rendered file: `docker-compose exec nginx cat /etc/nginx/conf.d/default.conf`.
 
 ### Changing the nginx config
 
@@ -404,7 +408,7 @@ substitute `humanmine` throughout.
    ```
    make build
    make up
-   docker compose logs nginx        # shows the derived PUBLIC_HOST/SCHEME/PORT
+   docker-compose logs nginx        # shows the derived PUBLIC_HOST/SCHEME/PORT
    ```
 
 5. Deploy the webapp into the (empty) test Tomcat. `make shell` applies

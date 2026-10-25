@@ -210,7 +210,7 @@ Replace it per site, e.g. `https://www.flymine.org`. Also added `INSTANCE=`
 - Bug fixed on the way: the original lines were written as
   `- BLUEGENES_DEFAULT_SERVICE_ROOT="https://${MINE}.org/${MINE}"`. In the
   list form of `environment`, docker-compose keeps the quotes as part of the
-  value; `docker compose config` on the original shows
+  value; `docker-compose config` on the original shows
   `'"https://somemine.org/somemine"'`. Both BlueGenes variables are now
   unquoted. (The production files presumably differ or BlueGenes would not
   start; check them.)
@@ -373,7 +373,7 @@ template, and how to stand up a parallel test deployment.
   `https://www.flymine.org/flymine/service` still routes correctly through the
   `/${MINE}/service` location.
 - nginx writes its access and error logs to per-host files inside the
-  container (as before), so they do not appear in `docker compose logs`.
+  container (as before), so they do not appear in `docker-compose logs`.
 
 ## Container restarts and Solr stability
 
