@@ -373,6 +373,26 @@ runtime-resolved variable, so nginx starts and serves the mine whether or not
 that container exists. The steps (network override, tool `config.json`
 edit) are in that repository's README.
 
+### JBrowse 2
+
+[intermineorg/jbrowse2](https://github.com/intermineorg/jbrowse2) is the
+JBrowse 2 replacement: a JBrowse 2 plugin that reads the same mine endpoints
+(plus the query service, for exon/intron structure), a container like the
+JBrowse 1 one, and a BlueGenes tool (`@intermine/bluegenes-jbrowse2-tool`)
+that embeds it. It runs alongside JBrowse 1, which the classic webapp still
+links to.
+
+The template has an optional `/jbrowse2/` location for it, the same pattern
+as `/jbrowse/`: with the `jbrowse2` container joined to this deployment's
+`frontend` network, the mine serves it as `${PUBLIC_URL}/jbrowse2/`, and the
+tool's `jbrowse2Url` is set to that. Without the container, `/jbrowse2/`
+returns 502 and nothing else is affected. Once JBrowse 2 has its own
+hostname (`https://jbrowse2.intermine.org/`, the tool's default) the
+location is not needed. Deployment steps, including the network override
+and installing the tool, are in that repository's `docs/DEPLOY.md`. After
+installing the tool, add it to the report page layout (see "Adding a
+BlueGenes tool to report pages").
+
 ## License
 
 MIT, see [LICENSE](LICENSE).

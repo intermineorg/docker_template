@@ -23,6 +23,7 @@ server {
 	set $tomcat http://tomcat:8080;
 	set $bluegenes http://bluegenes:5000;
 	set $jbrowse http://jbrowse:80;
+	set $jbrowse2 http://jbrowse2:80;
 	set $aligner http://aligner:3000;
 	error_log /var/log/nginx/${PUBLIC_HOST}_err.log warn;
 	access_log /var/log/nginx/${PUBLIC_HOST}_access.log combined;
@@ -124,6 +125,20 @@ server {
 	location = /jbrowse {
 		absolute_redirect off;
 		return 301 /jbrowse/;
+	}
+	# Optional: JBrowse 2 likewise, from https://github.com/intermineorg/jbrowse2
+	# (container jbrowse2, joined to this project's frontend network). Its
+	# BlueGenes tool then uses jbrowse2Url <public URL>/jbrowse2/. Not needed
+	# when JBrowse 2 has its own hostname (jbrowse2.intermine.org).
+	location /jbrowse2/ {
+		rewrite ^/jbrowse2/(.*)$ /$1 break;
+		proxy_pass $jbrowse2;
+		proxy_set_header Host $host;
+		proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
+	}
+	location = /jbrowse2 {
+		absolute_redirect off;
+		return 301 /jbrowse2/;
 	}
 	# Optional: the sequence-alignment service behind the BlueGenes MSA viewer
 	# (https://github.com/intermineorg/sequence-alignment-service), reached
