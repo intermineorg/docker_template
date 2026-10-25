@@ -305,12 +305,24 @@ directory per npm package under `data/tools/@intermine/<name>/`, listed in
 `data/tools/tools.edn`, e.g.
 `{:tools {"@intermine/bluegenes-jbrowse-tool" "1.0.1" ...}}`. Tools from npm
 can be installed from the BlueGenes admin page; one that is not on npm is
-copied into place and added to `tools.edn` by hand, followed by
-`make restart-bluegenes`. Either way, check that it is listed:
+copied into place and added to `tools.edn` by hand (back it up first:
+`cp data/tools/tools.edn data/tools/tools.edn.bak`), followed by
+`make restart-bluegenes`. Either way, check that it is listed, along with
+everything that was there before:
 
 ```sh
 curl -s https://www.humanmine.org/api/tools/all | grep -o '"npm":"[^"]*"'
 ```
+
+**Every entry in `tools.edn` is a name *and* a version string.** The
+file is one EDN map, so an entry without its version (or an unbalanced quote
+or brace) makes the whole file unreadable. BlueGenes then lists **no tools
+at all**, so every report page loses every tool panel, and it logs the
+misleading `Tool config ./tools/tools.edn is missing`; check with
+`docker logs ${MINE}_bluegenes 2>&1 | grep -i "tool config"`. A trailing
+newline is harmless. To undo a hand
+install: restore `tools.edn.bak`, delete the tool's directory,
+`make restart-bluegenes`.
 
 **Installed is not the same as shown.** Report pages follow the mine's
 saved *report page layout* for the object's class, and when a class has a
