@@ -50,10 +50,14 @@ cap), which is handy in scripts: `make restart-solr && make wait-healthy-solr`.
 Two things no restart target does:
 
 - **Config or image changes.** `docker-compose restart` restarts the existing
-  container as it is. After `make build`, or after editing `.env`,
-  `docker-compose.yml` or anything under `nginx/`, `solr/`, `tomcat/`, run
+  container as it is. After editing `.env` or `docker-compose.yml`, run
   `make up` (recreates only the services whose config changed) or
-  `docker-compose up -d <service>` for one. Recreating tomcat or bluegenes is
+  `docker-compose up -d <service>` for one. Files under `nginx/`, `solr/` and
+  `tomcat/` are copied into the images when they are built, so after editing
+  those rebuild first: `make build && make up`, or
+  `docker-compose build <service> && docker-compose up -d <service>` (for
+  nginx, test the new config before swapping it in: "Changing the nginx
+  config" below). Recreating tomcat or bluegenes is
   fine for nginx because of the runtime DNS resolution; before this change a
   recreated tomcat with a new IP left nginx returning 502 until it too was
   restarted, and nginx refused to start at all while tomcat or bluegenes did
@@ -185,6 +189,36 @@ Everything else, including nginx's own `$host`, `$uri`, `$1`, is left alone.
 The container refuses to start if `PUBLIC_URL` or `MINE` is missing. To see the
 rendered file: `docker compose exec nginx cat /etc/nginx/conf.d/default.conf`.
 
+### Changing the nginx config
+
+The template is copied into the nginx image at build time
+(`nginx/nginx.Dockerfile`), so restarting the container keeps the old
+config: rebuild the image. Test the result before replacing the running
+container, because a config nginx rejects leaves the container restarting
+in a loop and the whole site down:
+
+```sh
+cp nginx/nginx.conf.template nginx/nginx.conf.template.bak   # before editing
+
+# 1. build the image with the edited template; the running site is unaffected
+docker-compose build nginx
+
+# 2. test it in a throwaway container, which renders the template exactly as
+#    the real one will; expect "syntax is ok" and "test is successful"
+docker-compose run --rm --no-deps nginx nginx -t
+
+# 3. replace the running container (a second or two of downtime)
+docker-compose up -d nginx
+
+# 4. check
+make ps
+curl -sI https://www.humanmine.org/ | head -1
+```
+
+If step 2 fails, fix the template and repeat from step 1; the live site is
+still on the old config. To undo a change, restore the `.bak` copy and repeat
+steps 1 to 3.
+
 `X-Forwarded-Proto` and `X-Forwarded-Port` are taken from `PUBLIC_URL`, so a
 test deployment reached over plain `http://host:port` gets the right values
 automatically.
@@ -259,6 +293,39 @@ at the same-origin path and fixes two bugs in its bundled `msa` library
 
 The remaining visualizers (tissue expression, GO terms, pathways,
 interactions, Cytoscape) talk only to the mine itself and need nothing.
+
+## Adding a BlueGenes tool to report pages
+
+BlueGenes reads its tools from `data/tools/` (mounted as `/tools`): one
+directory per npm package under `data/tools/@intermine/<name>/`, listed in
+`data/tools/tools.edn`, e.g.
+`{:tools {"@intermine/bluegenes-jbrowse-tool" "1.0.1" ...}}`. Tools from npm
+can be installed from the BlueGenes admin page; one that is not on npm is
+copied into place and added to `tools.edn` by hand, followed by
+`make restart-bluegenes`. Either way, check that it is listed:
+
+```sh
+curl -s https://www.humanmine.org/api/tools/all | grep -o '"npm":"[^"]*"'
+```
+
+**Installed is not the same as shown.** Report pages follow the mine's
+saved *report page layout* for the object's class, and when a class has a
+saved layout only the tools in it appear; a layout is generated with every
+installed tool only for classes that have none. So a new tool is invisible
+on, for example, HumanMine gene pages until it is added: log in to BlueGenes
+as the mine's superuser, open **Admin**, **Report page layout**, choose the
+class, add the tool to a category from "Available classes, tools and
+templates", and **Save changes**. It applies to every user at once, with no
+restart. Removing a tool from a page (say the JBrowse 1 panel once JBrowse 2
+replaces it) is the same edit in reverse.
+
+The layout is not in this repository: BlueGenes stores it in the mine's
+userprofile database, through the web service, as the `layout.report`
+BlueGenes property. To see or keep a copy of it:
+
+```sh
+curl -s https://www.humanmine.org/humanmine/service/bluegenes-properties
+```
 
 ## Parallel test deployment
 
