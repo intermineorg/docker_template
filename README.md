@@ -270,9 +270,31 @@ Two of the installed tools fail even with `imjs` present, because each
 depends on a web service outside the mine that no longer answers. Both are
 fixed by editing the tool's built bundle in place in `data/tools/` (the
 directory mounted into the BlueGenes container as `/tools`); no container
-needs restarting, but browsers may cache the old bundle, so reload with
-cache bypass. Reinstalling or updating a tool from the BlueGenes admin page
-restores the original bundle, so keep a note of these edits.
+needs restarting, but change the tool's version so browsers fetch the
+edited bundle (below). Reinstalling or updating a tool from the BlueGenes
+admin page restores the original bundle and version, so keep a note of these
+edits.
+
+**After changing a tool's files, change its version.** BlueGenes loads a
+tool as `/tools/<package>/<files.js>?v=<version>`, the version coming from
+the tool's `package.json`, and the bundles are served without cache
+headers, so browsers keep a copy for a fraction of the file's *previous*
+age (often weeks to months for a bundle installed years ago). With the same
+version the patched bundle has the same URL and visitors keep running the
+old one; a private window or clearing the site's data shows the fix, which
+is what makes this confusing. Give the edited tool a new version, e.g.
+
+```sh
+t=data/tools/@intermine/bluegenes-msa-viewer   # from the mine's directory
+grep '"version"' $t/package.json                 # "version": "2.1.1"
+sed -i.bak 's/"version": "2.1.1"/"version": "2.1.1-patched.1"/' $t/package.json
+make restart-bluegenes
+curl -s https://www.humanmine.org/api/tools/all | grep -o '"version":"[^"]*patched[^"]*"'
+```
+
+and every browser fetches the new bundle on its next page load. Increase the
+suffix (`-patched.2`, ...) for each later edit. `tools.edn` keeps the
+installed version and needs no change.
 
 **Protein Visualizer** (`@intermine/bluegenes-protein-visualizer` 2.1.1)
 looks structures up with RCSB's search API v1, switched off in July 2022.
@@ -307,7 +329,9 @@ directory per npm package under `data/tools/@intermine/<name>/`, listed in
 can be installed from the BlueGenes admin page; one that is not on npm is
 copied into place and added to `tools.edn` by hand (back it up first:
 `cp data/tools/tools.edn data/tools/tools.edn.bak`), followed by
-`make restart-bluegenes`. Either way, check that it is listed, along with
+`make restart-bluegenes`. When replacing a hand-installed tool's files with
+a new build, give it a new version in `package.json` too ("After changing a
+tool's files, change its version" above). Either way, check that it is listed, along with
 everything that was there before:
 
 ```sh
