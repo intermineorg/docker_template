@@ -441,40 +441,42 @@ substitute `humanmine` throughout.
 
 ## JBrowse (genome browser)
 
-InterMine does not run JBrowse; report pages embed a separately hosted
-JBrowse 1.x (by default `https://jbrowse.intermine.org/`) and point it at the
-mine's `service/jbrowse/...` endpoints. If that host is unreachable every gene
-report page shows a blank browser panel. One JBrowse serves every mine, so it
-lives in its own repository:
-[intermineorg/jbrowse](https://github.com/intermineorg/jbrowse).
+InterMine does not run a genome browser itself. Gene report pages embed a
+separately hosted one through a BlueGenes tool, and it reads the mine's
+`service/jbrowse/...` endpoints. If that host is unreachable, every gene
+report page shows a blank browser panel. Two exist, each in its own
+repository, both served to the mine the same way:
 
-What this template contributes is the optional `/jbrowse/` location in
-`nginx/nginx.conf.template`: when the `jbrowse` container is joined to this
-deployment's `frontend` network, the mine serves it as
-`${PUBLIC_URL}/jbrowse/` with no extra port or hostname. The upstream is a
-runtime-resolved variable, so nginx starts and serves the mine whether or not
-that container exists. The steps (network override, tool `config.json`
-edit) are in that repository's README.
+| | JBrowse 2 | JBrowse 1 |
+|---|---|---|
+| Repository | [intermineorg/jbrowse2](https://github.com/intermineorg/jbrowse2) | [intermineorg/jbrowse](https://github.com/intermineorg/jbrowse) |
+| BlueGenes tool | `@intermine/bluegenes-jbrowse2-tool` (in that repository) | `@intermine/bluegenes-jbrowse-tool` (npm) |
+| Container, host port | `jbrowse2`, 14881 | `jbrowse`, 14880 |
+| Route in this template | `/jbrowse2/` | `/jbrowse/` |
+| Shared hostname | `https://jbrowse2.intermine.org/` (planned) | `https://jbrowse.intermine.org/` |
 
-### JBrowse 2
+**HumanMine and FlyMine use JBrowse 2**: their gene report pages show only
+the JBrowse 2 panel, which draws genes with their exon/intron structure
+(JBrowse 1 on these mines showed flat boxes or a density histogram). Keep
+JBrowse 1 running anyway: the classic webapp links to it, and other sites
+use it.
 
-[intermineorg/jbrowse2](https://github.com/intermineorg/jbrowse2) is the
-JBrowse 2 replacement: a JBrowse 2 plugin that reads the same mine endpoints
-(plus the query service, for exon/intron structure), a container like the
-JBrowse 1 one, and a BlueGenes tool (`@intermine/bluegenes-jbrowse2-tool`)
-that embeds it. It runs alongside JBrowse 1, which the classic webapp still
-links to.
+Both routes in `nginx/nginx.conf.template` are optional and work the same
+way: with the container joined to this deployment's `frontend` network, the
+mine serves it as `${PUBLIC_URL}/jbrowse2/` (or `/jbrowse/`) with no extra
+port or hostname. The upstreams are runtime-resolved variables, so nginx
+starts and serves the mine whether or not either container exists (the
+missing one's route answers 502). Neither route is needed once the browser
+has its own hostname. The steps (network override, tool install and its
+URL) are in each repository's documentation, for JBrowse 2 in
+`docs/DEPLOY.md` and `bluegenes-tool/README.md`.
 
-The template has an optional `/jbrowse2/` location for it, the same pattern
-as `/jbrowse/`: with the `jbrowse2` container joined to this deployment's
-`frontend` network, the mine serves it as `${PUBLIC_URL}/jbrowse2/`, and the
-tool's `jbrowse2Url` is set to that. Without the container, `/jbrowse2/`
-returns 502 and nothing else is affected. Once JBrowse 2 has its own
-hostname (`https://jbrowse2.intermine.org/`, the tool's default) the
-location is not needed. Deployment steps, including the network override
-and installing the tool, are in that repository's `docs/DEPLOY.md`. After
-installing the tool, add it to the report page layout (see "Adding a
-BlueGenes tool to report pages").
+To switch a mine's report pages from JBrowse 1 to JBrowse 2: install the
+JBrowse 2 tool with `jbrowse2Url` set to `${PUBLIC_URL}/jbrowse2/`, then in
+**Admin**, **Report page layout**, class `Gene`, add *JBrowse 2 Genome
+Browser* and remove *JBrowse Genome Browser* (see "Adding a BlueGenes tool to
+report pages"). The JBrowse 1 tool can stay installed; it simply no longer
+appears. To switch back, reverse the layout change.
 
 ## License
 
