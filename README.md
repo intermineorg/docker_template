@@ -361,11 +361,34 @@ replaces it) is the same edit in reverse.
 
 The layout is not in this repository: BlueGenes stores it in the mine's
 userprofile database, through the web service, as the `layout.report`
-BlueGenes property. To see or keep a copy of it:
+BlueGenes property (the homepage notice is the `notice` property). A
+database rebuild, or a slip in the Admin page, loses it. Keep a copy in the
+mine's own repository with `scripts/bluegenes-properties.py` (Python 3.8+,
+no dependencies):
 
 ```sh
-curl -s https://www.humanmine.org/humanmine/service/bluegenes-properties
+# save the live layout (pretty-printed: one category, class, tool or template per line)
+scripts/bluegenes-properties.py export https://www.humanmine.org/humanmine -o bluegenes --key layout.report
+
+# does the live mine still match the saved copy? (exit status 1 if not)
+scripts/bluegenes-properties.py check https://www.humanmine.org/humanmine bluegenes/layout.report.edn
+
+# put the saved copy back (or apply an edited one): needs the superuser's API
+# token (BlueGenes, logged in as the superuser: Account, API access key)
+scripts/bluegenes-properties.py apply https://www.humanmine.org/humanmine \
+    bluegenes/layout.report.edn --token-file ~/.humanmine-superuser-token --dry-run
+scripts/bluegenes-properties.py apply https://www.humanmine.org/humanmine \
+    bluegenes/layout.report.edn --token-file ~/.humanmine-superuser-token
 ```
+
+`apply` first saves the live values under `bluegenes-backups/<date-time>/`
+(apply those files to undo), writes only what differs, and reads the mine
+back to confirm. It uses the same web service as the Admin page
+(`PUT`/`POST <mine>/service/bluegenes-properties`). That service's `PUT`
+splits its body on `&` and `=` after decoding it, so a value containing
+either is sent as query parameters instead; the script handles this. Keep
+the token file private (`chmod 600`) and out of git. Tests, offline against
+a stand-in for the service: `python3 -m unittest discover -s scripts -p 'test_*.py'`.
 
 ## Parallel test deployment
 

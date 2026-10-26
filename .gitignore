@@ -3,3 +3,6 @@
 data/
 *.log
 .DS_Store
+# backups written by scripts/bluegenes-properties.py apply
+bluegenes-backups/
+__pycache__/
